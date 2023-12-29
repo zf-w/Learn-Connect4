@@ -1,7 +1,7 @@
 use crate::GameState;
-use std::{fmt::Display, rc::Rc};
+use std::rc::Rc;
 
-use super::Connect4;
+use super::{Connect4, masks::get_winning_mask};
 
 pub struct State {
   game: Rc<Connect4>,
@@ -27,10 +27,12 @@ impl GameState for State {
   }
 
   fn possible_moves(&self) -> Vec<u16> {
-      let moves_mask = self.possible_moves_mask();
+      let options = self.possible_moves_mask();
+      
       let mut res: Vec<u16> = Vec::with_capacity(self.game.width as usize);
+     
       for col in 0..self.game.width {
-        if (self.game.mask_col(col) & moves_mask) > 0 {
+        if (self.game.mask_col(col) & options) > 0 {
           res.push(col as u16);
         }
       }
@@ -41,10 +43,14 @@ impl GameState for State {
     if !self.can_play(a) {
       return Err("Not a valid move");
     }
+
+    if self.is_winning_action(a) {
+      return Err("This is a winning action");
+    }
+
     let col = a as u8;
     self.moves.push(col);
-    let move_mask = (self.mask + 
-      self.game.mask_col_bottom(col)) & 
+    let move_mask = (self.possible_moves_mask()) & 
       self.game.mask_col(col);
     self.player ^= self.mask;
     self.mask |= move_mask;
@@ -58,13 +64,18 @@ impl GameState for State {
     }?;
 
     let stone_mask =((self.mask & self.game.mask_col(col)) +self.game.mask_col_bottom(col)) >> 1;
-    self.mask &= stone_mask;
-    self.player &= stone_mask;
+    self.mask &= stone_mask ^ 0;
+    self.player &= stone_mask ^ 0;
+    self.mask ^= self.game.mask_full();
     Ok(())
   }
 
   fn key(&self) -> u64 {
       self.player + self.mask
+  }
+
+  fn bound(&self) -> (i32, i32) {
+        todo!()
   }
 }
 
@@ -72,53 +83,92 @@ impl State {
   fn possible_moves_mask(&self) -> u64 {
     (self.mask + self.game.mask_bottom()) & self.game.mask_full()
   }
-}
 
-impl Display for State {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let w = self.game.width;
-        let h = self.game.height;
-        let mut stones_str: String = String::with_capacity((w * h + h) as usize + 1);
-        stones_str.push('\n');
-        let first_to_play: bool = self.moves.len() % 2 == 0;
-        for row_i in 0..h {
-          let h_offset = h - 1 - row_i;
-          
-          let mask = self.mask;
-          for col_i in 0..w {
-            let offset = h_offset + (h + 1) * col_i;
-            let player = ((self.player >> offset) & 1 == 0) ^ first_to_play;
-            let to_push = if mask >> offset & 1 == 1 {
-              if player {
-                'o'
-              } else {
-                'x'
-              }
-            } else {
-              '.'
-            };
-            stones_str.push(to_push);
-          }
-          stones_str.push('\n');
-        }
-        write!(f, "{}", stones_str)
+  fn empty_space_mask(&self) -> u64 {
+    self.game.mask_full() ^ self.mask
+  }
+
+  fn me_winning_mask(&self) -> u64 {
+    get_winning_mask(&self.player, &self.game.height) & self.empty_space_mask()
+  }
+
+  fn opponent_winning_mask(&self) -> u64 {
+    let opponent = &self.player ^ &self.mask;
+    get_winning_mask(&opponent, &self.game.height) & self.empty_space_mask()
+  }
+
+  fn is_winning_action(&self, a: u16) -> bool {
+    let col = a as u8;
+    self.me_winning_mask() & self.game.mask_col(col) > 0
+  }
+
+  pub fn play_multiple(&mut self, moves: &Vec<u16>) -> Result<(), &'static str> {
+    for a in moves.iter() {
+      self.play(*a)?
     }
-}
+    Ok(())
+  }
 
-#[cfg(test)]
-mod test {
-    use crate::{Connect4, GameState};
+  fn heuristic_action_score(&self, a: u16) ->u16 {
+    let col = a as u8;
+    let move_mask = self.possible_moves_mask() & 
+      self.game.mask_col(col);
+    let stones = self.player | move_mask;
+    let winning = get_winning_mask(&stones, &self.game.height) & self.empty_space_mask();
+    fn bit_count(stones: &u64) -> u8 {
+      let mut count: u8 = 0;
+      let mut n = stones.clone();
+      while n > 0 {
+        n &= n - 1;
+        count += 1;
+      }
+      count
+    }
+    let h_w = self.game.width as i16 / 2;
+    let col_i16 = col as i16;
+    let count = bit_count(&winning) as u16;
 
-  #[test]
-  fn check_possible_moves() {
-    let game = Connect4::new(7, 6);
-    let mut s = game.start();
-    let got0 = s.possible_moves_mask();
-    let expected0: u64 = 0b0000001_0000001_0000001_0000001_0000001_0000001_0000001;
-    assert_eq!(got0, expected0);
-    assert!(s.play(2).is_ok());
-    let got1 = s.possible_moves_mask();
-    let expected1: u64 = 0b0000001_0000001_0000001_0000001_0000010_0000001_0000001;
-    assert_eq!(got1, expected1);
+    count * (h_w + 1) as u16 + (h_w - (col_i16 - h_w).abs()) as u16
+  }
+
+  pub fn nonlosing_moves_sorted(&self) -> Vec<u16> {
+      let len: usize = self.game.width as usize;
+      let mut res: Vec<u16> = Vec::with_capacity(len);
+      let mut scores: Vec<u16> = Vec::with_capacity(len);
+      
+      let mut options = self.possible_moves_mask();
+      
+      let opponent_winning = self.opponent_winning_mask();
+      
+      if opponent_winning > 0 && (opponent_winning & (opponent_winning - 1)) > 0 {
+        return res;
+      } else if opponent_winning > 0 {
+        options &= opponent_winning;
+      }
+
+      let mut insert = |col: u16, score: u16| {
+        let mut i = res.len();
+        scores.push(0);
+        res.push(0);
+        while i > 0 && scores[i - 1] < score {
+          scores[i] = scores[i - 1];
+          res[i] = res[i - 1];
+          i -= 1;
+        }
+        scores[i] = score;
+        res[i] = col;
+      };
+      
+      for col in 0..self.game.width as u16 {
+        if (self.game.mask_col(col as u8) & options) > 0 {
+          insert(col, self.heuristic_action_score(col));
+        }
+      }
+      res
   }
 }
+
+mod display;
+
+#[cfg(test)]
+mod test;
