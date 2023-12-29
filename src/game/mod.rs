@@ -30,6 +30,9 @@ impl Connect4 {
       0, 0)
   }
 
+  pub fn total_stones(&self) -> u16 {
+    (self.width * self.height) as u16
+  }
 
   pub fn mask_col_top(&self, col: u8) -> u64 {
     1 << ((self.height - 1) + col * (self.height + 1))

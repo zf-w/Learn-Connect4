@@ -3,11 +3,15 @@ mod game;
 pub trait GameState {
   fn can_play(&self, a: u16) -> bool;
   fn possible_moves(&self) -> Vec<u16>;
-  fn bound(&self) -> (i32, i32);
-  fn play(&mut self, a: u16) -> Result<(),&'static str>;
-  fn unplay(&mut self) -> Result<(), &'static str>;
+  fn play(&mut self, a: u16) -> Result<(),Box<dyn Error>>;
+  fn unplay(&mut self) -> Result<(), Box<dyn Error>>;
   fn key(&self) -> u64;
 }
 
+mod solver;
+
+use std::error::Error;
+
 pub use game::Connect4;
 pub use game::State;
+pub use solver::Solver;

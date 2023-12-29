@@ -20,6 +20,8 @@ fn check_play_multiple() {
   let actions: Vec<u16> = vec![3,3,3,4,4,4,4,3,1,1,0];
   assert!(s.play_multiple(&actions).is_ok());
   assert_eq!(format!("{}", s), r#"
+Log: 44455554221
+Num: 11
 .......
 .......
 ...xo..
@@ -111,7 +113,8 @@ fn check_nonlosing_moves_sorted_case_losing() {
   let actions: Vec<u16> = vec![3,3,3,4,4,4,4,3,1,1,0];
   assert!(s.play_multiple(&actions).is_ok());
  
-  assert!(s.nonlosing_moves_sorted().is_empty());
+  let expected_sorted_moves: Vec<u16> = vec![2];
+  assert_eq!(s.nonlosing_moves_sorted(), expected_sorted_moves);
 }
 
 #[test]
@@ -129,6 +132,8 @@ fn check_nonlosing_moves_sorted_case_start() {
   let expected_scores: Vec<u16> = vec![0,1,2,3,6,1,0];
 
   assert_eq!(format!("{}", s), r#"
+Log: 44535
+Num: 5
 .......
 .......
 .......
@@ -140,4 +145,51 @@ fn check_nonlosing_moves_sorted_case_start() {
   assert_eq!(got_scores, expected_scores);
   let expected_sorted_moves: Vec<u16> = vec![4,3,2,1,5,0,6];
   assert_eq!(s.nonlosing_moves_sorted(), expected_sorted_moves);
+}
+
+#[test]
+fn check_bug1_wrong_filp_in_unplay() {
+  let game = Connect4::new(7, 6);
+  let mut s = game.start();
+  let action_str = "225257625346224411156336534367135144";
+  let actions: Vec<u16> = action_str.chars().map(|c| -> u16 {
+    c as u16 - '1' as u16
+  }).collect();
+  assert!(s.play_multiple(&actions).is_ok());
+
+  assert_eq!(format!("{}", s), r#"
+Log: 225257625346224411156336534367135144
+Num: 36
+.xxxo..
+xoxooo.
+oxxoxx.
+oxoxoo.
+xxxooxx
+ooxooox
+"#);
+// let keep = stone_mask ^ 1; used 0 here, causing error
+// self.mask &= keep;
+// self.player &= keep;
+// self.player ^= self.game.mask_full(); 
+//
+//
+  // println!("{}", format_board(s.player, game.width, game.height));
+  // println!("{}", format_board(s.mask, game.width, game.height));
+  assert!(s.play(0).is_ok());
+  // println!("{}", format_board(s.player, game.width, game.height));
+  // println!("{}", format_board(s.mask, game.width, game.height));
+  assert!(s.unplay().is_ok());
+  // println!("{}", s);
+  // println!("{}", format_board(s.player, game.width, game.height));
+  // println!("{}", format_board(s.mask, game.width, game.height));
+  assert_eq!(format!("{}", s), r#"
+Log: 225257625346224411156336534367135144
+Num: 36
+.xxxo..
+xoxooo.
+oxxoxx.
+oxoxoo.
+xxxooxx
+ooxooox
+"#);
 }

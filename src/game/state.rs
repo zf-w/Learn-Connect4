@@ -1,5 +1,5 @@
 use crate::GameState;
-use std::rc::Rc;
+use std::{rc::Rc, error::Error};
 
 use super::{Connect4, masks::get_winning_mask};
 
@@ -20,6 +20,8 @@ impl State {
   }
 }
 
+pub mod bound;
+
 impl GameState for State {
   fn can_play(&self, a: u16) -> bool {
     let flag: bool = (a as u8) < self.game.width;
@@ -39,13 +41,13 @@ impl GameState for State {
       res
   }
 
-  fn play(&mut self, a: u16) -> Result<(), &'static str> {
+  fn play(&mut self, a: u16) -> Result<(), Box<dyn Error>> {
     if !self.can_play(a) {
-      return Err("Not a valid move");
+      return Err("Not a valid move".into());
     }
 
     if self.is_winning_action(a) {
-      return Err("This is a winning action");
+      return Err(format!("This is a winning action. Trying to play {a} in {}", &self).into());
     }
 
     let col = a as u8;
@@ -57,29 +59,27 @@ impl GameState for State {
     Ok(())
   }
 
-  fn unplay(&mut self) -> Result<(), &'static str> {
+  fn unplay(&mut self) -> Result<(), Box<dyn Error>> {
     let col = match self.moves.pop() {
       Some(v) => Ok(v),
       None => Err("That's already the initial state")
     }?;
 
     let stone_mask =((self.mask & self.game.mask_col(col)) +self.game.mask_col_bottom(col)) >> 1;
-    self.mask &= stone_mask ^ 0;
-    self.player &= stone_mask ^ 0;
-    self.mask ^= self.game.mask_full();
+    let keep = !stone_mask;
+    self.mask &= keep;
+    self.player &= keep;
+    self.player ^= self.mask;
     Ok(())
   }
 
   fn key(&self) -> u64 {
       self.player + self.mask
   }
-
-  fn bound(&self) -> (i32, i32) {
-        todo!()
-  }
 }
 
 impl State {
+
   fn possible_moves_mask(&self) -> u64 {
     (self.mask + self.game.mask_bottom()) & self.game.mask_full()
   }
@@ -99,10 +99,10 @@ impl State {
 
   fn is_winning_action(&self, a: u16) -> bool {
     let col = a as u8;
-    self.me_winning_mask() & self.game.mask_col(col) > 0
+    self.me_winning_mask() & self.possible_moves_mask() & self.game.mask_col(col) > 0
   }
 
-  pub fn play_multiple(&mut self, moves: &Vec<u16>) -> Result<(), &'static str> {
+  pub fn play_multiple(&mut self, moves: &Vec<u16>) -> Result<(), Box<dyn Error>> {
     for a in moves.iter() {
       self.play(*a)?
     }
@@ -138,7 +138,7 @@ impl State {
       
       let mut options = self.possible_moves_mask();
       
-      let opponent_winning = self.opponent_winning_mask();
+      let opponent_winning = self.opponent_winning_mask() & options;
       
       if opponent_winning > 0 && (opponent_winning & (opponent_winning - 1)) > 0 {
         return res;
@@ -166,6 +166,26 @@ impl State {
       }
       res
   }
+}
+
+fn _format_board(b: u64, w: u8, h: u8) -> String {
+  let mut res: String = String::with_capacity(64);
+  for row_i in 0..h {
+    let h_offset = h - 1 - row_i;
+    
+    for col_i in 0..w {
+      let offset = h_offset + (h + 1) * col_i;
+      
+      let to_push = if b >> offset & 1 == 1 {
+        'o'
+      } else {
+        '.'
+      };
+      res.push(to_push);
+    }
+    res.push('\n');
+  }
+  res
 }
 
 mod display;
