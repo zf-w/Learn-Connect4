@@ -12,6 +12,13 @@ impl TranspositionTable {
     }
   }
 
+  pub fn reset(&mut self) {
+    for v in self.t.iter_mut() {
+      v.0 = 0;
+      v.1 = 0;
+    }
+  }
+
   fn index(&self, k: u64) -> usize {
     k as usize % self.t.len()
   }
@@ -29,5 +36,16 @@ impl TranspositionTable {
     } else {
       None
     }
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::TranspositionTable;
+  #[test]
+  fn check_put_get() {
+    let mut t = TranspositionTable::new(7);
+    t.put(100, -1);
+    assert_eq!(t.get(100), Some(-1));
   }
 }

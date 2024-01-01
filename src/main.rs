@@ -10,8 +10,23 @@ fn run(action_str: &str) {
     }
     
     match solver.solve(&actions) {
-        Ok(v) => {
-            println!("Final score: {}", v);
+        Ok((s, v)) => {
+            println!("{}", s);
+            println!("\"{}\"'s turn", if actions.len() % 2 == 0 {
+                'o'
+            } else {
+                'x'
+            });
+            println!("Score: {}", v);
+            println!("Result: {}", 
+            if v == 0 {
+                String::from("draw")
+            } else if v > 0 {
+                format!("win in {} turns", s.my_left_stones() as i32 - v)
+              
+            } else {
+                format!("lose in {} turns", s.opponent_left_stones() as i32 + v)
+            })
         },
         Err(s) => {
             println!("Error: {}", s);
@@ -21,10 +36,10 @@ fn run(action_str: &str) {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    println!("{}", &args[1]);
     if args.len() < 2 {
         eprintln!("Application error: not enough arguments");
         process::exit(1);
     }
+    println!("{}", &args[1]);
     run(&args[1]);
 }
