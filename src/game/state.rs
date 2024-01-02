@@ -138,13 +138,17 @@ impl State {
       
       let mut options = self.possible_moves_mask();
       
-      let opponent_winning = self.opponent_winning_mask() & options;
+      let opponent_winning = self.opponent_winning_mask();
       
-      if opponent_winning > 0 && (opponent_winning & (opponent_winning - 1)) > 0 {
+      let opponent_winning_next = opponent_winning & options;
+
+      if opponent_winning_next > 0 && (opponent_winning_next & (opponent_winning_next - 1)) > 0 {
         return res;
-      } else if opponent_winning > 0 {
-        options &= opponent_winning;
+      } else if opponent_winning_next > 0 {
+        options &= opponent_winning_next;
       }
+
+      options &= !(opponent_winning >> 1);
 
       let mut insert = |col: u16, score: u16| {
         let mut i = res.len();

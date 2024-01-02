@@ -26,7 +26,8 @@ fn run(action_str: &str) {
               
             } else {
                 format!("lose in {} turns", s.opponent_left_stones() as i32 + v)
-            })
+            });
+            println!("Expored nodes: {}", solver.count());
         },
         Err(s) => {
             println!("Error: {}", s);
