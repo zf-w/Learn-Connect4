@@ -1,28 +1,49 @@
-use std::{rc::Rc, error::Error};
+use std::{rc::Rc, error::Error, fs::File };
 
 use crate::{Connect4, State, GameState};
 
-use self::transposition::TranspositionTable;
+use self::game_table::C4GameTable;
 
+mod game_table;
 mod transposition;
 
 pub struct Solver {
-  t: TranspositionTable,
+  t: C4GameTable,
   count: usize,
   game: Rc<Connect4>
 }
 
+use game_table::GameTableUsize::*;
+
 impl Solver {
-  pub fn new(game: Rc<Connect4>) -> Self {
-    Self {
-      t: TranspositionTable::new(8388593),
+  pub fn new(game: Rc<Connect4>) -> Result<Self, Box<dyn Error>> {
+    let sizes = vec![(10, Book(100)), (16, Table(4000037)), (16, Table(4000037))];
+    let t: C4GameTable = C4GameTable::new(Rc::clone(&game), sizes)?;
+    Ok(Self {
+      t,
       count: 0,
       game
-    }
+    })
   }
 
   pub fn count(&self) -> usize {
     self.count
+  }
+
+  pub fn write_to_book(&self, f: File) -> Result<(), Box<dyn Error>> {
+    
+    self.t.write_to_book(f)?;
+    Ok(())
+  }
+
+  pub fn new_with_book(f: File) -> Result<Self, Box<dyn Error>> {
+
+    let sizes = vec![(10, Book(100)), (16, Table(4000037)), (16, Table(4000037))];
+    let t: C4GameTable = C4GameTable::new_with_book(f, sizes)?;
+    let game = t.game();
+    Ok(Self {
+      t, game, count: 0
+    })
   }
 
   fn negamax(&mut self, s: &mut State, mut bound: (i32, i32)) -> Result<i32, Box<dyn Error>> {
@@ -45,8 +66,8 @@ impl Solver {
         return Ok(bound.1);
       }
     }
-    let curr_key = s.key();
-    if let Some(v) = self.t.get(curr_key) {
+    
+    if let Some(v) = self.t.get(&s) {
       bound.1 = v as i32;
       if bound.0 >= bound.1 {
         return Ok(bound.1);
@@ -69,7 +90,7 @@ impl Solver {
       }
     }
     // println!("Finished {} score: {}", s, bound.0);
-    self.t.put(curr_key, bound.0 as i8);
+    self.t.put(&s, bound.0 as i8);
     Ok(bound.0)
   }
 
@@ -86,6 +107,18 @@ impl Solver {
     let score = self.negamax(&mut s, bound)?;
     
     Ok((s, score))
+  }
+
+  pub fn log_from_start(&mut self) -> Result<(), Box<dyn Error>> {
+    let mut s = self.game.start();
+
+    let bound = s.bound();
+   self.negamax(&mut s, bound)?;
+    Ok(())
+  }
+
+  pub fn game(&self) -> Rc<Connect4> {
+    Rc::clone(&self.game)
   }
 }
 

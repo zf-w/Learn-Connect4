@@ -1,14 +1,14 @@
-use std::{fs, path::Path};
+use std::{fs::{self, File}, path::Path, error::Error};
 
 use crate::{Solver, Connect4};
 
 #[test]
-fn bebug_place() {
+fn bebug_place() -> Result<(), Box<dyn Error>> {
   let game = Connect4::new(7, 6);
-  let mut solver = Solver::new(game.clone());
+  let mut solver = Solver::new(game.clone())?;
 
   let mut s = game.start();
-  let action_str = "215211625424277276665415665177";
+  let action_str = "432147";
   let actions: Vec<u16> = action_str.chars().map(|c| -> u16 {
     c as u16 - '1' as u16
   }).collect();
@@ -18,9 +18,29 @@ fn bebug_place() {
   let bound = s.bound();
   println!("[{} {}]", s.bound().0, s.bound().1);
   println!("{}", solver.negamax(&mut s, bound).unwrap());
+  let f = File::create("w7h6c4opening.data")?;
+  solver.write_to_book(f)?;
+  Ok(())
 }
 
-fn read_to_string<P>(p: P, f: &mut String) -> Result<(), Box<dyn std::error::Error>>
+#[test]
+fn check_new_with_book() -> Result<(), Box<dyn Error>> {
+  let f = File::open("w7h6c4opening.data")?;
+  let mut solver = Solver::new_with_book(f)?;
+  let game = solver.game();
+
+  let mut s = game.start();
+  let action_str = "432147";
+  let actions: Vec<u16> = action_str.chars().map(|c| -> u16 {
+    c as u16 - '1' as u16
+  }).collect();
+  s.play_multiple(&actions)?;
+  let bound = s.bound();
+  println!("{}",solver.negamax(&mut s, bound)?);
+  Ok(())
+}
+
+fn read_to_string<P>(p: P, f: &mut String) -> Result<(), Box<dyn Error>>
   where P: AsRef<Path> {
   *f = fs::read_to_string(p)?;
   Ok(())
@@ -68,12 +88,12 @@ fn parse_testcase_string(f: &str) -> Vec<(&str, &str)> {
 
 /// 6763525635134453444361412671365712277
 #[test]
-fn check_l3_r1() {
+fn check_l3_r1() -> Result<(), Box<dyn Error>> {
   let mut f: String = String::new();
   assert!(read_to_string("./src/testcases/Test_L3_R1", &mut f).is_ok());
   
   let game = Connect4::new(7, 6);
-  let mut solver = Solver::new(game);
+  let mut solver = Solver::new(game.clone())?;
   let mut actions: Vec<u16> = Vec::with_capacity(7 * 6);
   // let mut count = 0;
   let cases = parse_testcase_string(&f);
@@ -81,15 +101,16 @@ fn check_l3_r1() {
   for (actions_str, expected_str) in cases {
     check_state(actions_str, expected_str, &mut actions, &mut solver);
   }
+  Ok(())
 }
 
 #[test]
-fn check_l2_r1() {
+fn check_l2_r1() -> Result<(), Box<dyn Error>> {
   let mut f: String = String::new();
   assert!(read_to_string("./src/testcases/Test_L2_R1", &mut f).is_ok());
   
   let game = Connect4::new(7, 6);
-  let mut solver = Solver::new(game);
+  let mut solver = Solver::new(game)?;
   let mut actions: Vec<u16> = Vec::with_capacity(7 * 6);
   // let mut count = 0;
   let cases = parse_testcase_string(&f);
@@ -97,4 +118,23 @@ fn check_l2_r1() {
   for (actions_str, expected_str) in cases {
     check_state(actions_str, expected_str, &mut actions, &mut solver);
   }
+  Ok(())
+}
+
+
+#[test]
+fn check_l1_r1() -> Result<(), Box<dyn Error>> {
+  let mut f: String = String::new();
+  assert!(read_to_string("./src/testcases/Test_L1_R1", &mut f).is_ok());
+  
+  let game = Connect4::new(7, 6);
+  let mut solver = Solver::new(game)?;
+  let mut actions: Vec<u16> = Vec::with_capacity(7 * 6);
+  // let mut count = 0;
+  let cases = parse_testcase_string(&f);
+  println!("Total number of cases: {}...", cases.len());
+  for (actions_str, expected_str) in cases {
+    check_state(actions_str, expected_str, &mut actions, &mut solver);
+  }
+  Ok(())
 }

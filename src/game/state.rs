@@ -198,6 +198,7 @@ pub fn _format_board(b: u64, w: u8, h: u8) -> String {
   res
 }
 
+
 mod display;
 
 #[cfg(test)]

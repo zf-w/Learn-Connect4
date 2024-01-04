@@ -221,3 +221,11 @@ fn check_bug2_key_symmetric() -> Result<(), Box<dyn Error>> {
   assert_eq!(s0.key(), s1.key());
   Ok(())
 }
+
+#[test]
+fn check_count_stones_mask() {
+  let ipt = 0b0111111_0111111_0110000_0110000_0111111_0111100_0111110u64;
+  let expected = 15usize;
+  let game = Connect4::new(7, 6);
+  assert_eq!(game.count_mask_stones(ipt), expected);
+}

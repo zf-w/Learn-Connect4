@@ -77,6 +77,20 @@ impl Connect4 {
     }
     n_mask
   }
+
+  pub fn count_mask_stones(&self, m: u64) -> usize {
+    let w = self.width;
+    let off = self.height + 1;
+    let mut count = 0usize;
+    for col in 0..w {
+      let curr_off: u16 = col as u16 * off as u16;
+      let curr_col = m & self.mask_col_full(col);
+      if curr_col > 0 {
+        count += (u64::ilog2(curr_col) - curr_off as u32) as usize;
+      }
+    }
+    count
+  }
 }
 
 #[cfg(test)]

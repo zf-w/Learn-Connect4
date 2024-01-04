@@ -1,11 +1,11 @@
 use std::{rc, env, error::Error};
 
-use learn_connect4::{Solver, Explorer};
+use learn_connect4::Solver;
 
-fn run(action_str: &str) {
+fn run(action_str: &str) -> Result<(), Box<dyn Error>> {
     let game = learn_connect4::Connect4::new(7, 6);
     let mut actions: Vec<u16> = Vec::with_capacity(game.total_stones() as usize);
-    let mut solver = Solver::new(rc::Rc::clone(&game));
+    let mut solver = Solver::new(rc::Rc::clone(&game))?;
     for c in action_str.chars() {
         actions.push(c as u16 - '1' as u16);
     }
@@ -34,11 +34,12 @@ fn run(action_str: &str) {
             println!("Error: {}", s);
         }
     }
+    Ok(())
 }
 
 fn make_book() -> Result<(), Box<dyn Error>>{
     let game = learn_connect4::Connect4::new(7, 6);
-    let mut explorer = Explorer::new(rc::Rc::clone(&game));
+    let mut explorer = Solver::new(rc::Rc::clone(&game))?;
     explorer.log_from_start()?;
     Ok(())
 }
@@ -52,10 +53,10 @@ fn main() {
                 _ => ()
             }
         } else {
-            run(v);
+            let _ = run(v);
         }
     } else {
         println!("Empty (start state)");
-        run(&"");
+        let _ = run(&"");
     }
 }
