@@ -74,11 +74,17 @@ impl GameState for State {
   }
 
   fn key(&self) -> u64 {
-      self.player + self.mask
+      let p_mask = self.player + (self.mask + self.game.mask_bottom());
+      
+      p_mask.max(self.game.flip_c4_board(p_mask))
   }
 }
 
 impl State {
+
+  pub fn len(&self) -> usize {
+    self.moves.len()
+  }
 
   fn possible_moves_mask(&self) -> u64 {
     (self.mask + self.game.mask_bottom()) & self.game.mask_full()
@@ -172,10 +178,10 @@ impl State {
   }
 }
 
-fn _format_board(b: u64, w: u8, h: u8) -> String {
+pub fn _format_board(b: u64, w: u8, h: u8) -> String {
   let mut res: String = String::with_capacity(64);
-  for row_i in 0..h {
-    let h_offset = h - 1 - row_i;
+  for row_i in 0..=h {
+    let h_offset = h - row_i;
     
     for col_i in 0..w {
       let offset = h_offset + (h + 1) * col_i;

@@ -30,9 +30,11 @@ impl TranspositionTable {
 
   pub fn get(&self, k: u64) -> Option<i8> {
     let i = self.index(k);
-    let stored_key = self.t[i].0;
-    if stored_key == k {
-      Some(self.t[i].1)
+    let curr = self.t[i];
+    let stored_key = curr.0;
+    
+    if stored_key == k && curr.1 != 0 {
+      Some(curr.1)
     } else {
       None
     }

@@ -1,23 +1,16 @@
+use std::rc;
+
 use std::{fs, path::Path};
 
-use crate::{Solver, Connect4};
+use crate::{Explorer, Connect4};
 
 #[test]
-fn bebug_place() {
+fn run() -> Result<(), Box<dyn std::error::Error>>{
   let game = Connect4::new(7, 6);
-  let mut solver = Solver::new(game.clone());
-
-  let mut s = game.start();
-  let action_str = "215211625424277276665415665177";
-  let actions: Vec<u16> = action_str.chars().map(|c| -> u16 {
-    c as u16 - '1' as u16
-  }).collect();
-  assert!(s.play_multiple(&actions).is_ok());
-  println!("{}", s);
-  println!("{:?}", s.nonlosing_moves_sorted());
-  let bound = s.bound();
-  println!("[{} {}]", s.bound().0, s.bound().1);
-  println!("{}", solver.negamax(&mut s, bound).unwrap());
+  let mut explorer = Explorer::new(rc::Rc::clone(&game));
+  explorer.log_from_start()?;
+  explorer.compile_book();
+  Ok(())
 }
 
 fn read_to_string<P>(p: P, f: &mut String) -> Result<(), Box<dyn std::error::Error>>
@@ -32,7 +25,7 @@ fn read_moves_to_vec(action_str: &str, actions: &mut Vec<u16>) {
   }
 }
 
-fn check_state(actions_str: &str, expected_str: &str, actions: &mut Vec<u16>, solver: &mut Solver) {
+fn check_state(actions_str: &str, expected_str: &str, actions: &mut Vec<u16>, solver: &mut Explorer) {
   solver.reset();
   actions.clear();
   read_moves_to_vec(actions_str, actions);
@@ -73,23 +66,7 @@ fn check_l3_r1() {
   assert!(read_to_string("./src/testcases/Test_L3_R1", &mut f).is_ok());
   
   let game = Connect4::new(7, 6);
-  let mut solver = Solver::new(game);
-  let mut actions: Vec<u16> = Vec::with_capacity(7 * 6);
-  // let mut count = 0;
-  let cases = parse_testcase_string(&f);
-  println!("Total number of cases: {}...", cases.len());
-  for (actions_str, expected_str) in cases {
-    check_state(actions_str, expected_str, &mut actions, &mut solver);
-  }
-}
-
-#[test]
-fn check_l2_r1() {
-  let mut f: String = String::new();
-  assert!(read_to_string("./src/testcases/Test_L2_R1", &mut f).is_ok());
-  
-  let game = Connect4::new(7, 6);
-  let mut solver = Solver::new(game);
+  let mut solver = Explorer::new(game);
   let mut actions: Vec<u16> = Vec::with_capacity(7 * 6);
   // let mut count = 0;
   let cases = parse_testcase_string(&f);

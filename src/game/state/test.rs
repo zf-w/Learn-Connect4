@@ -1,4 +1,6 @@
-use crate::{Connect4, GameState};
+use std::error::Error;
+
+use crate::{Connect4, GameState, game::state::_format_board};
 
 #[test]
 fn check_possible_moves() {
@@ -192,4 +194,30 @@ oxoxoo.
 xxxooxx
 ooxooox
 "#);
+}
+
+#[test]
+fn check_bug2_key_symmetric() -> Result<(), Box<dyn Error>> {
+  
+// .......
+// .......
+// .......
+// .......
+// ...xo..
+// ..xoo..
+  let w: u8 = 7;
+  let h: u8 = 6;
+  let game = Connect4::new(7, 6);
+  let mut s0 = game.start();
+  let mut s1 = game.start();
+  let actions0: Vec<u16> = vec![3,3,4,2,4,0,1];
+  let actions1: Vec<u16> = vec![3,3,2,4,2,6,5];
+  s0.play_multiple(&actions0)?;
+  s1.play_multiple(&actions1)?;
+  // println!("{}", s0);
+  // println!("{}", s1);
+  println!("{}", _format_board(s0.key(), w, h));
+  println!("{}", _format_board(s1.key(), w, h));
+  assert_eq!(s0.key(), s1.key());
+  Ok(())
 }

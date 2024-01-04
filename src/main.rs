@@ -1,6 +1,7 @@
-use std::{rc, env, process};
+use std::{rc, env, error::Error};
 
-use learn_connect4::Solver;
+use learn_connect4::{Solver, Explorer};
+
 fn run(action_str: &str) {
     let game = learn_connect4::Connect4::new(7, 6);
     let mut actions: Vec<u16> = Vec::with_capacity(game.total_stones() as usize);
@@ -35,12 +36,26 @@ fn run(action_str: &str) {
     }
 }
 
+fn make_book() -> Result<(), Box<dyn Error>>{
+    let game = learn_connect4::Connect4::new(7, 6);
+    let mut explorer = Explorer::new(rc::Rc::clone(&game));
+    explorer.log_from_start()?;
+    Ok(())
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Application error: not enough arguments");
-        process::exit(1);
+        println!("{}", &args[1]);
+    if let Some(v) = args.get(1) {
+        if v == "make" {
+            match make_book() {
+                _ => ()
+            }
+        } else {
+            run(v);
+        }
+    } else {
+        println!("Empty (start state)");
+        run(&"");
     }
-    println!("{}", &args[1]);
-    run(&args[1]);
 }

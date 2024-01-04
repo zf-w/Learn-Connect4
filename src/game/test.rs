@@ -24,6 +24,14 @@ fn col_bottom_mask_check_for_w7h6() {
 }
 
 #[test]
+fn check_flip_board_for_w7h6() {
+  let game = Connect4::new(7, 6);
+  let ipt: u64 = 0b0111111_0011111_0001111_0000111_0000011_0000001_0000000;
+  let expected: u64 = 0b0000000_0000001_0000011_0000111_0001111_0011111_0111111;
+  assert_eq!(game.flip_c4_board(ipt), expected);
+}
+
+#[test]
 fn check_display() {
   let game = Connect4::new(7, 6);
   let mut s = game.start();
