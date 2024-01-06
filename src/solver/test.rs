@@ -16,8 +16,7 @@ fn bebug_place() -> Result<(), Box<dyn Error>> {
   println!("{}", s);
   println!("{:?}", s.nonlosing_moves_sorted());
   let bound = s.bound();
-  println!("[{} {}]", s.bound().0, s.bound().1);
-  println!("{}", solver.negamax(&mut s, bound).unwrap());
+  // println!("{}", solver.negamax(&mut s, bound).unwrap());
   let f = File::create("w7h6c4opening.data")?;
   solver.write_to_book(f)?;
   Ok(())
@@ -36,7 +35,7 @@ fn check_new_with_book() -> Result<(), Box<dyn Error>> {
   }).collect();
   s.play_multiple(&actions)?;
   let bound = s.bound();
-  println!("{}",solver.negamax(&mut s, bound)?);
+  // println!("{}",solver.negamax(&mut s, bound)?);
   Ok(())
 }
 

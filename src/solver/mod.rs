@@ -13,6 +13,7 @@ pub struct Solver {
 }
 
 use game_table::GameTableUsize::*;
+use super::game::StateResult::{Immediate, Bounds};
 
 impl Solver {
   pub fn new(game: Rc<Connect4>) -> Result<Self, Box<dyn Error>> {
@@ -48,30 +49,35 @@ impl Solver {
   fn negamax(&mut self, s: &mut State, mut bound: (i32, i32)) -> Result<i32, Box<dyn Error>> {
     // println!("Starting {}", s);
     self.count += 1;
-    let new_bound = s.bound();
-    if new_bound.0 == new_bound.1 {
-      // println!("Finished {} score: {}", s, new_bound.0);
-      return Ok(new_bound.0);
-    }
-    if bound.0 < new_bound.0 {
-      bound.0 = new_bound.0;
-      if bound.0 >= bound.1 {
-        return Ok(bound.0);
+    let res = s.bound();
+    match res {
+      Immediate(v) => {
+        // println!("Finished {} score: {}", s, new_bound.0);
+        return Ok(v);
+      },
+      Bounds(new_bound) => {
+        if bound.0 < new_bound.0 {
+          bound.0 = new_bound.0;
+          if bound.0 >= bound.1 {
+            return Ok(bound.0);
+          }
+        }
+        if bound.1 > new_bound.1 {
+          bound.1 = new_bound.1;
+          if bound.0 >= bound.1 {
+            return Ok(bound.1);
+          }
+        }
+        
+        if let Some(v) = self.t.get(&s) {
+          bound.1 = v as i32;
+          if bound.0 >= bound.1 {
+            return Ok(bound.1);
+          }
+        }
       }
-    }
-    if bound.1 > new_bound.1 {
-      bound.1 = new_bound.1;
-      if bound.0 >= bound.1 {
-        return Ok(bound.1);
-      }
-    }
+    };
     
-    if let Some(v) = self.t.get(&s) {
-      bound.1 = v as i32;
-      if bound.0 >= bound.1 {
-        return Ok(bound.1);
-      }
-    }
     
     // println!("Looping with [{}, {}]", bound.0, bound.1);
     let actions = s.nonlosing_moves_sorted();
@@ -101,18 +107,24 @@ impl Solver {
   pub fn solve(&mut self, moves: &Vec<u16>) -> Result<(State, i32), Box<dyn Error>> {
     let mut s = self.game.start();
     s.play_multiple(moves)?;
-    let bound = s.bound();
-    
-    let score = self.negamax(&mut s, bound)?;
-    
-    Ok((s, score))
+    let res = s.bound();
+
+    match res {
+      Immediate(score) => {
+        return Ok((s, score));
+      },
+      Bounds(bound) => {
+        let score = self.negamax(&mut s, bound)?;
+        return Ok((s, score));
+      }
+    };
   }
 
   pub fn log_from_start(&mut self) -> Result<(), Box<dyn Error>> {
     let mut s = self.game.start();
 
-    let bound = s.bound();
-   self.negamax(&mut s, bound)?;
+    // let bound = s.bound();
+   self.negamax(&mut s, (0, 0))?;
     Ok(())
   }
 

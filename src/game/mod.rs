@@ -4,6 +4,7 @@ mod state;
 mod masks;
 pub use state::_format_board;
 pub use state::State;
+pub use state::bound::StateResult;
 pub struct Connect4 {
   width: u8,
   height: u8,

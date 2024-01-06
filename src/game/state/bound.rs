@@ -1,3 +1,11 @@
+#[derive(PartialEq, Debug)]
+pub enum StateResult {
+  Immediate(i32),
+  Bounds((i32, i32))
+}
+
+use StateResult::{Immediate, Bounds};
+
 impl super::State {
   pub fn my_left_stones(&self) -> u16 {
     let total_used = self.moves.len() as u16;
@@ -16,29 +24,29 @@ impl super::State {
     self.game.total_stones() - total_used - self.my_left_stones()
   }
 
-  pub fn bound(&self) -> (i32, i32) {
+  pub fn bound(&self) -> StateResult {
     let moves_mask = self.possible_moves_mask();
     let me_winning_mask = self.me_winning_mask();
     let op_next_winning_mask = self.opponent_winning_mask() & moves_mask;
     let my_left_stones = self.my_left_stones();
     let op_left_stones = self.opponent_left_stones();
     if me_winning_mask & moves_mask > 0 {
-      return (my_left_stones as i32, my_left_stones as i32);
+      return Immediate(my_left_stones as i32);
     }
     if (op_next_winning_mask > 0) && (op_next_winning_mask & (op_next_winning_mask - 1) > 0) {
-      return (op_left_stones as i32 * -1, op_left_stones as i32 * -1);
+      return Immediate(-(op_left_stones as i32));
     }
     if self.moves.len() as u16 >= self.game.total_stones() {
-      return (0, 0);
+      return Immediate(0);
     }
 
-    (-((op_left_stones) as i32), (my_left_stones) as i32)
+    Bounds((-((op_left_stones) as i32), (my_left_stones) as i32))
   }
 }
 
 #[cfg(test)]
 mod test {
-  use crate::{Connect4, game::state::_format_board};
+  use crate::{Connect4, game::state::{_format_board, bound::StateResult}};
 
   #[test]
   fn check_bound_case1() {
@@ -61,7 +69,8 @@ xxxooxx
 ooxooox
 "#);
     println!("{}", _format_board(s.me_winning_mask(), 7, 6));
-    println!("{}, {}", s.bound().0, s.bound().1);
+    let expected = StateResult::Bounds((-2, 3));
+    assert_eq!(s.bound(), expected);
   }
 
   #[test]
@@ -84,6 +93,7 @@ xxxoxxx
 xooxooo
 oxxooox
 "#);
-    println!("{}, {}", s.bound().0, s.bound().1);
+    let expected = StateResult::Bounds((-2, 3));
+    assert_eq!(s.bound(), expected);
   }
 }
