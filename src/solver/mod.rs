@@ -5,7 +5,6 @@ use crate::{Connect4, State, GameState};
 use self::game_table::C4GameTable;
 
 mod game_table;
-mod transposition;
 
 pub struct Solver {
   t: C4GameTable,
@@ -17,7 +16,7 @@ use game_table::GameTableUsize::*;
 
 impl Solver {
   pub fn new(game: Rc<Connect4>) -> Result<Self, Box<dyn Error>> {
-    let sizes = vec![(10, Book(100)), (16, Table(4000037)), (16, Table(4000037))];
+    let sizes = vec![(14, Book(1000)), (14, Table(4000037)), (14, Table(4000037))];
     let t: C4GameTable = C4GameTable::new(Rc::clone(&game), sizes)?;
     Ok(Self {
       t,
@@ -38,7 +37,7 @@ impl Solver {
 
   pub fn new_with_book(f: File) -> Result<Self, Box<dyn Error>> {
 
-    let sizes = vec![(10, Book(100)), (16, Table(4000037)), (16, Table(4000037))];
+    let sizes = vec![(14, Book(1000)), (14, Table(4000037)), (14, Table(4000037))];
     let t: C4GameTable = C4GameTable::new_with_book(f, sizes)?;
     let game = t.game();
     Ok(Self {

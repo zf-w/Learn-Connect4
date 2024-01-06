@@ -155,7 +155,7 @@ impl C4GameTable {
     let w = u8::from_be_bytes(buf8);
     reader.read_exact(&mut buf8)?;
     let h = u8::from_be_bytes(buf8);
-    println!("{}, {}", w, h);
+  
     let game = Connect4::new(w, h);
     let mut me = Self::new(Rc::clone(&game), sizes)?;
     reader.read_exact(&mut buf64)?;
