@@ -46,34 +46,47 @@ impl Solver {
     })
   }
 
-  fn negamax(&mut self, s: &mut State, mut bound: (i32, i32)) -> Result<i32, Box<dyn Error>> {
+  fn negamax(&mut self, s: &mut State, bound_opt: Option<(i32, i32)>) -> Result<i32, Box<dyn Error>> {
     // println!("Starting {}", s);
     self.count += 1;
     let res = s.bound();
-    match res {
-      Immediate(v) => {
-        // println!("Finished {} score: {}", s, new_bound.0);
-        return Ok(v);
-      },
-      Bounds(new_bound) => {
-        if bound.0 < new_bound.0 {
-          bound.0 = new_bound.0;
-          if bound.0 >= bound.1 {
-            return Ok(bound.0);
+    let mut bound: (i32, i32);
+    if let Some(b) = bound_opt {
+      bound = b;
+      match res {
+        Immediate(v) => {
+          // println!("Finished {} score: {}", s, new_bound.0);
+          return Ok(v);
+        },
+        Bounds(new_bound) => {
+          if bound.0 < new_bound.0 {
+            bound.0 = new_bound.0;
+            if bound.0 >= bound.1 {
+              return Ok(bound.0);
+            }
+          }
+          if bound.1 > new_bound.1 {
+            bound.1 = new_bound.1;
+            if bound.0 >= bound.1 {
+              return Ok(bound.1);
+            }
+          }
+          
+          if let Some(v) = self.t.get(&s) {
+            bound.1 = v as i32;
+            if bound.0 >= bound.1 {
+              return Ok(bound.1);
+            }
           }
         }
-        if bound.1 > new_bound.1 {
-          bound.1 = new_bound.1;
-          if bound.0 >= bound.1 {
-            return Ok(bound.1);
-          }
-        }
-        
-        if let Some(v) = self.t.get(&s) {
-          bound.1 = v as i32;
-          if bound.0 >= bound.1 {
-            return Ok(bound.1);
-          }
+      };
+    } else {
+      match res {
+        Immediate(v) => {
+          return Ok(v);
+        },
+        Bounds(new_bound) => {
+          bound = new_bound;
         }
       }
     };
@@ -83,7 +96,7 @@ impl Solver {
     let actions = s.nonlosing_moves_sorted();
     for a in actions.iter() {
       s.play(*a)?;
-      let score = -self.negamax(s, (-bound.1, -bound.0))?;
+      let score = -self.negamax(s, Some((-bound.1, -bound.0)))?;
       s.unplay()?;
       if score > bound.0 {
         bound.0 = score;
@@ -114,7 +127,7 @@ impl Solver {
         return Ok((s, score));
       },
       Bounds(bound) => {
-        let score = self.negamax(&mut s, bound)?;
+        let score = self.negamax(&mut s, Some(bound))?;
         return Ok((s, score));
       }
     };
@@ -124,7 +137,7 @@ impl Solver {
     let mut s = self.game.start();
 
     // let bound = s.bound();
-   self.negamax(&mut s, (0, 0))?;
+   self.negamax(&mut s, None)?;
     Ok(())
   }
 
