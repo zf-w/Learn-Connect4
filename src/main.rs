@@ -46,10 +46,13 @@ where P: AsRef<Path> {
         }
     }
     if let Some(t) = to {
-        let to_file = File::create(t)?;
-        solver.write_to_book(to_file)?;
+        let mut try_finalize = true;
+        while try_finalize {
+            try_finalize = solver.finalize_pruned_in_books()?;
+            let to_file = File::create(t)?;
+            solver.write_to_book(to_file)?;
+        }
     }
-    
     Ok(())
 }
 
@@ -114,15 +117,4 @@ fn main() {
         eprintln!("Sorry, there is an error: {e}");
         process::exit(1);
     }
-//     let usage = r#"
-// <actions to state> <Path: to book> <Path: from book>
-// "#;
-    
-//     match match (args.get(1), args.get(2), args.get(3)) {
-//         (Some(a), Some(to), from) => run(a, to, from),
-//         _ => Err("Invalid arguments".into())
-//     } {
-//         Err(e) => println!("Error: {}\nUsage: {}", e, usage),
-//         Ok(()) => ()
-//     }
 }

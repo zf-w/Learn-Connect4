@@ -28,7 +28,7 @@ impl Connect4 {
   pub fn start(&self) -> state::State {
     state::State::new(
       rc::Rc::clone(&self.me.upgrade().unwrap()),
-      0, 0)
+      0, 0, 0)
   }
 
   pub fn width(&self) -> u8 {
@@ -91,6 +91,32 @@ impl Connect4 {
       }
     }
     count
+  }
+
+  fn build_mask_and_player_from_combined(&self, m: u64) -> (u64, u64, usize) {
+    let w = self.width;
+    let off = self.height + 1;
+    let mut count = 0usize;
+    let mut mask: u64 = 0;
+    for col in 0..w {
+      let curr_off: u16 = col as u16 * off as u16;
+      let curr_col = m & self.mask_col_full(col);
+      let mut new_col_mask: u64 = 1;
+      if curr_col > 0 {
+        let col_count = (u64::ilog2(curr_col) - curr_off as u32) as usize;
+        count += col_count;
+        new_col_mask <<= col_count;
+        new_col_mask -= 1;
+      }
+      mask |= new_col_mask << curr_off;
+    }
+    (mask, m - (mask + self.mask_bottom()), count)
+  }
+
+  pub fn start_from_mask(&self, m: u64) -> state::State {
+    let (mask, player, moves_num) = self.build_mask_and_player_from_combined(m);
+    
+    state::State::new(self.me.clone().upgrade().unwrap(), player, mask, moves_num)
   }
 }
 

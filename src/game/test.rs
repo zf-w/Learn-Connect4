@@ -73,3 +73,12 @@ Num: 6
 "#);
   assert!(s.play(1).is_err());
 }
+
+#[test]
+fn check_retrieve_player_and_mask() {
+  let game = Connect4::new(7, 6);
+  let ipt: u64 = 0b0000001_0000001_0000010_0000001_0000001_0000001_0000001;
+  let expected_mask: u64 = 0b0000000_0000000_0000001_0000000_0000000_0000000_0000000;
+  let expected_player: u64 = 0b0000000_0000000_0000000_0000000_0000000_0000000_0000000;
+  assert_eq!(game.build_mask_and_player_from_combined(ipt), (expected_mask, expected_player, 1));
+}

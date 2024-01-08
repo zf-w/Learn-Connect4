@@ -7,19 +7,11 @@ pub struct State {
   game: Rc<Connect4>,
   player: u64,
   mask: u64,
-  moves: Vec<u8>
+  moves: Vec<u8>,
+  moves_num: usize
 }
 
-impl State {
-  pub fn new(game: Rc<Connect4>, player: u64, mask: u64) -> Self {
-    State {
-      game,
-      player, mask,
-      moves: Vec::new()
-    }
-  }
-}
-
+pub mod new;
 pub mod bound;
 
 impl GameState for State {
@@ -56,6 +48,7 @@ impl GameState for State {
       self.game.mask_col(col);
     self.player ^= self.mask;
     self.mask |= move_mask;
+    self.moves_num += 1;
     Ok(())
   }
 
@@ -70,6 +63,7 @@ impl GameState for State {
     self.mask &= keep;
     self.player &= keep;
     self.player ^= self.mask;
+    self.moves_num -= 1;
     Ok(())
   }
 
@@ -83,7 +77,7 @@ impl GameState for State {
 impl State {
 
   pub fn len(&self) -> usize {
-    self.moves.len()
+    self.moves_num
   }
 
   fn possible_moves_mask(&self) -> u64 {

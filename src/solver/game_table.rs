@@ -3,7 +3,7 @@ use std::{collections::HashMap, rc::Rc, error::Error};
 mod table;
 use table::Table;
 
-use super::NegamaxResult;
+use super::NegamaxResult::{self, *};
 
 use crate::{Connect4, State, GameState};
 
@@ -80,7 +80,13 @@ impl C4GameTable {
     match self.indices[*moves_num] {
       Book(i) => {
         let book = &mut self.books[i];
-        book.insert(key, score);
+        if let Some(old_score) = book.get_mut(&key) {
+          if let Pruned(_) = old_score {
+            *old_score = score;
+          }
+        } else {
+          book.insert(key, score);
+        }
       },
       Table(i) => {
         let table = &mut self.tables[i];
@@ -106,6 +112,18 @@ impl C4GameTable {
         table.get(s.key())
       }
     }
+  }
+
+  pub fn get_pruned_keys_in_books(&self) -> Vec<u64> {
+    let mut ans: Vec<u64> = Vec::with_capacity(100);
+    for book in self.books.iter() {
+      for (key, res) in book.iter() {
+        if let Pruned(_) = res {
+          ans.push(*key);
+        }
+      }
+    }
+    ans
   }
 
   pub fn game(&self) -> Rc<Connect4> {

@@ -8,7 +8,7 @@ use StateResult::{Immediate, Bounds};
 
 impl super::State {
   pub fn my_left_stones(&self) -> u16 {
-    let total_used = self.moves.len() as u16;
+    let total_used = self.moves_num as u16;
     let total = self.game.total_stones();
     
     let first_hand = total_used % 2;
@@ -20,7 +20,7 @@ impl super::State {
   }
 
   pub fn opponent_left_stones(&self) -> u16 {
-    let total_used = self.moves.len() as u16;
+    let total_used = self.moves_num as u16;
     self.game.total_stones() - total_used - self.my_left_stones()
   }
 
@@ -36,7 +36,7 @@ impl super::State {
     if (op_next_winning_mask > 0) && (op_next_winning_mask & (op_next_winning_mask - 1) > 0) {
       return Immediate(-(op_left_stones as i32));
     }
-    if self.moves.len() as u16 >= self.game.total_stones() {
+    if self.moves_num as u16 >= self.game.total_stones() {
       return Immediate(0);
     }
 
