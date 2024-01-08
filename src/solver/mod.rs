@@ -12,6 +12,16 @@ pub struct Solver {
   game: Rc<Connect4>
 }
 
+type Score = i8;
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum NegamaxResult {
+  Actual(Score),
+  Pruned(Score)
+}
+
+use NegamaxResult::*;
+
 use game_table::GameTableUsize::*;
 use super::game::StateResult::{Immediate, Bounds};
 
@@ -51,17 +61,17 @@ impl Solver {
     self.count += 1;
     let res = s.bound();
     let mut bound: (i32, i32);
-    if let Some(b) = bound_opt {
-      bound = b;
-      match res {
-        Immediate(v) => {
-          // println!("Finished {} score: {}", s, new_bound.0);
-          return Ok(v);
-        },
-        Bounds(new_bound) => {
+    match res {
+      Immediate(v) => {
+        // println!("Finished {} score: {}", s, new_bound.0);
+        return Ok(v);
+      },
+      Bounds(new_bound) => {
+        if let Some(b) = bound_opt {
+          bound = b;
           if bound.0 < new_bound.0 {
-            bound.0 = new_bound.0;
-            if bound.0 >= bound.1 {
+          bound.0 = new_bound.0;
+          if bound.0 >= bound.1 {
               return Ok(bound.0);
             }
           }
@@ -71,26 +81,25 @@ impl Solver {
               return Ok(bound.1);
             }
           }
-          
-          if let Some(v) = self.t.get(&s) {
-            bound.1 = v as i32;
-            if bound.0 >= bound.1 {
-              return Ok(bound.1);
-            }
-          }
-        }
-      };
-    } else {
-      match res {
-        Immediate(v) => {
-          return Ok(v);
-        },
-        Bounds(new_bound) => {
+        } else {
           bound = new_bound;
         }
       }
     };
-    
+
+    if let Some(res) = self.t.get(&s) {
+      match res {
+        Actual(s) => {
+          return Ok(*s as i32);
+        },
+        Pruned(s) => {
+          bound.1 = *s as i32;
+          if bound.0 >= bound.1 {
+            return Ok(bound.1);
+          }
+        },
+      }
+    }
     
     // println!("Looping with [{}, {}]", bound.0, bound.1);
     let actions = s.nonlosing_moves_sorted();
@@ -108,7 +117,15 @@ impl Solver {
       }
     }
     // println!("Finished {} score: {}", s, bound.0);
-    self.t.put(&s, bound.0 as i8);
+    match bound_opt {
+      None => {
+        self.t.put(&s, Actual(bound.0 as i8));
+      },
+      Some(_) => {
+        self.t.put(&s, Pruned(bound.0 as i8));
+      }
+    }
+    
     Ok(bound.0)
   }
 

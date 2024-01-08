@@ -1,7 +1,9 @@
-use std::{collections::HashMap, rc::Rc, error::Error, fs::File, io::{Write, Read}};
+use std::{collections::HashMap, rc::Rc, error::Error};
 
 mod table;
 use table::Table;
+
+use super::NegamaxResult;
 
 use crate::{Connect4, State, GameState};
 
@@ -10,7 +12,7 @@ pub enum GameTableUsize {
   Table(usize)
 }
 
-type Book = HashMap<u64, i8>;
+type Book = HashMap<u64, NegamaxResult>;
 pub struct C4GameTable {
   game: Rc<Connect4>,
   indices: Vec<GameTableUsize>,
@@ -74,7 +76,7 @@ impl C4GameTable {
     }
   }
 
-  fn insert_key(&mut self, moves_num: &usize, key: u64, score: i8) {
+  fn insert_key(&mut self, moves_num: &usize, key: u64, score: NegamaxResult) {
     match self.indices[*moves_num] {
       Book(i) => {
         let book = &mut self.books[i];
@@ -87,17 +89,17 @@ impl C4GameTable {
     }
   }
 
-  pub fn put(&mut self, s: &State, score: i8) {
+  pub fn put(&mut self, s: &State, score: NegamaxResult) {
     let moves_num = s.len();
     self.insert_key(&moves_num, s.key(), score);
   }
 
-  pub fn get(&self, s: &State) -> Option<i8> {
+  pub fn get(&self, s: &State) -> Option<&NegamaxResult> {
     let moves_num = s.len();
     match self.indices[moves_num] {
       Book(i) => {
         let book = &self.books[i];
-        book.get(&s.key()).copied()
+        book.get(&s.key())
       },
       Table(i) => {
         let table = &self.tables[i];
@@ -109,70 +111,9 @@ impl C4GameTable {
   pub fn game(&self) -> Rc<Connect4> {
     Rc::clone(&self.game)
   }
-
-  pub fn write_to_book(&self, mut f: File) -> Result<(), Box<dyn Error>> {
-    fn push_u64_to_bytes(v: &mut Vec<u8>, it: &u64) {
-      for byte in it.to_be_bytes() {
-        v.push(byte);
-      }
-    }
-    fn push_i8_to_bytes(v: &mut Vec<u8>, it: &i8) {
-      for byte in it.to_be_bytes() {
-        v.push(byte);
-      }
-    }
-    fn push_u8_to_bytes(v: &mut Vec<u8>, it: &u8) {
-      for byte in it.to_be_bytes() {
-        v.push(byte);
-      }
-    }
-    let w = self.game.width();
-    let h = self.game.height();
-    let total_cases: u64 = self.books.iter()
-      .map(|book| -> usize {book.len()})
-      .sum::<usize>() as u64;
-    println!("Writing {} openings", {total_cases});
-    let mut to_write: Vec<u8> = Vec::with_capacity(1 + 1 + 8 + 9 * total_cases as usize);
-    push_u8_to_bytes(&mut to_write, &w);
-    push_u8_to_bytes(&mut to_write, &h);
-    push_u64_to_bytes(&mut to_write, &total_cases);
-    for book in self.books.iter() {
-      for (case, score) in book.iter() {
-        push_u64_to_bytes(&mut to_write, case);
-        push_i8_to_bytes(&mut to_write, score);
-      }
-    }
-    
-    f.write_all(&to_write)?;
-    Ok(())
-  }
-
-  pub fn new_with_book(mut reader: File, sizes: Vec<(usize, GameTableUsize)>) -> Result<Self, Box<dyn Error>> {
-    let mut buf8: [u8; 1] = [0; 1];
-    let mut buf64: [u8; 8] = [0; 8];
-
-    reader.read_exact(&mut buf8)?;
-    let w = u8::from_be_bytes(buf8);
-    reader.read_exact(&mut buf8)?;
-    let h = u8::from_be_bytes(buf8);
-  
-    let game = Connect4::new(w, h);
-    let mut me = Self::new(Rc::clone(&game), sizes)?;
-    reader.read_exact(&mut buf64)?;
-    let total = u64::from_be_bytes(buf64);
-    println!("Number of stored: {}", total);
-    for _ in 0..total {
-      reader.read_exact(&mut buf64)?;
-      let case = u64::from_be_bytes(buf64);
-      reader.read_exact(&mut buf8)?;
-      let score = i8::from_be_bytes(buf8);
-      let count = game.count_mask_stones(case);
-      me.insert_key(&count, case, score);
-    }
-    me.write_books = false;
-    Ok(me)
-  }
 }
+
+mod build;
 
 #[cfg(test)]
 mod test {
@@ -184,8 +125,8 @@ mod test {
     let mut t = C4GameTable::new(Rc::clone(&game), sizes)?;
     let s = game.start();
 
-    t.put(&s, -1);
-    assert_eq!(t.get(&s), Some(-1));
+    t.put(&s, NegamaxResult::Actual(-1));
+    assert_eq!(t.get(&s), Some(NegamaxResult::Actual(-1)).as_ref());
     Ok(())
   }
   #[test]
